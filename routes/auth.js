@@ -1,14 +1,13 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
-import { addUser, findUserByEmail } from "../models/userModel.js";
+import User from "../models/userModel.js";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "healthlens-secret";
 
-const sanitizeUser = ({ id, name, email, age, gender, area }) => ({
-  id,
+const sanitizeUser = ({ _id, name, email, age, gender, area }) => ({
+  id: _id.toString(),
   name,
   email,
   age,
@@ -17,7 +16,7 @@ const sanitizeUser = ({ id, name, email, age, gender, area }) => ({
 });
 
 const createToken = (user) =>
-  jwt.sign({ sub: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+  jwt.sign({ sub: user._id.toString(), email: user.email }, JWT_SECRET, { expiresIn: "7d" });
 
 router.post("/register", async (req, res) => {
   try {
@@ -28,23 +27,21 @@ router.post("/register", async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const alreadyRegistered = !!findUserByEmail(normalizedEmail);
+    const alreadyRegistered = await User.findOne({ email: normalizedEmail });
     if (alreadyRegistered) {
       return res.status(409).json({ message: "Email already registered" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = {
-      id: crypto.randomUUID(),
+    const newUser = await User.create({
       name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
       age,
       gender,
       area,
-    };
+    });
 
-    addUser(newUser);
     const token = createToken(newUser);
 
     res.status(201).json({ success: true, user: sanitizeUser(newUser), token });
@@ -62,7 +59,7 @@ router.post("/login", async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const user = findUserByEmail(normalizedEmail);
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
