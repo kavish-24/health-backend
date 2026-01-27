@@ -1,14 +1,17 @@
-const users = [];
+import mongoose from "mongoose";
 
-export function getAllUsers() {
-  return [...users];
-}
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true },
+    age: { type: String, required: true },
+    gender: { type: String, required: true },
+    area: { type: String, required: true },
+  },
+  { timestamps: true }
+);
 
-export function findUserByEmail(email) {
-  return users.find((user) => user.email === email);
-}
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
-export function addUser(user) {
-  users.push(user);
-  return user;
-}
+export default User;
