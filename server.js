@@ -5,6 +5,8 @@ import symptomCheckRoutes from "./routes/symptomcheck.js";
 import authroutes from "./routes/auth.js";
 import getCalories from "./routes/getCalories.js"
 import whoSymptoms from "./routes/whoSymptoms.js"
+import goalRoutes from "./routes/goallogs.js";
+import aiAnalysisRoutes from "./routes/aiAnalysis.js";
 import { connectDB } from "./utils/db.js";
 
 dotenv.config();
@@ -18,6 +20,9 @@ app.use("/api", symptomCheckRoutes);
 app.use('/api/auth', authroutes);
 app.use('/api/getCalories',getCalories);
 app.use('/api/whoSymptoms',whoSymptoms)
+app.use('/api/goals', goalRoutes);
+app.use('/api/getCalories',getCalories);
+app.use('/api/ai', aiAnalysisRoutes);
 
 const startServer = async () => {
   try {
