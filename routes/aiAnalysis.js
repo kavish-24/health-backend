@@ -17,7 +17,7 @@ router.post("/health-analysis", requireAuth, async (req, res) => {
     }
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash"
+      model: "gemini-1.5-flash"
     });
 
     const prompt = `Preventive health AI for ${userData.name}, ${userData.age}y in Verna, Goa.
