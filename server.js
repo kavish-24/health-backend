@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import symptomCheckRoutes from "./routes/symptomcheck.js";
 import authroutes from "./routes/auth.js";
+import goalRoutes from "./routes/goallogs.js";
+import getCalories from "./routes/getCalories.js"
 import { connectDB } from "./utils/db.js";
 
 dotenv.config();
@@ -14,6 +16,8 @@ app.use(express.json());
 
 app.use("/api", symptomCheckRoutes);
 app.use('/api/auth', authroutes);
+app.use('/api/goals', goalRoutes);
+app.use('/api/getCalories',getCalories);
 
 const startServer = async () => {
   try {
