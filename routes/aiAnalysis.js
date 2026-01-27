@@ -1,14 +1,14 @@
 import express from "express";
 import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { protect } from "../middlewares/authMiddleware.js";
+import { requireAuth } from "../middlewares/authMiddleware.js";
 
 dotenv.config();
 const router = express.Router();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-router.post("/health-analysis", protect, async (req, res) => {
+router.post("/health-analysis", requireAuth, async (req, res) => {
   try {
     const { userData, communityData } = req.body;
 
