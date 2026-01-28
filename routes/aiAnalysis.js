@@ -17,71 +17,24 @@ router.post("/health-analysis", requireAuth, async (req, res) => {
     }
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp"
+      model: "gemini-2.0-flash"
     });
 
-    const prompt = `
-You are an AI health advisor analyzing individual health data against community health trends.
+    const prompt = `Preventive health AI for ${userData.name}, ${userData.age}y in Verna, Goa.
 
-USER PROFILE:
-- Name: ${userData.name || 'User'}
-- Age: ${userData.age || 'Unknown'}
-- Recent Activity: ${userData.recentActivity || 'No data'}
-- Recent Goals: ${userData.recentGoals || 'No data'}
+Local Health: ${communityData.topSymptoms.map(s => `${s.name} ${s.percentage}%`).join(', ')} | Alerts: ${communityData.activeAlerts.join(', ') || 'None'} | ${communityData.activeHotspots} hotspots | Trend: ${communityData.trendChange || '0'}%
 
-COMMUNITY HEALTH TRENDS (Local Area):
-- Top Symptoms in Area: ${communityData.topSymptoms.map(s => `${s.symptom} (${s.percentage}%)`).join(', ')}
-- Active Health Alerts: ${communityData.alerts.map(a => a.title).join(', ')}
-- Risk Hotspots: ${communityData.hotspots.length} active zones
-- Trend: ${communityData.trendChange}% change vs last week
+Age ${userData.age} patterns: ${(() => {
+  const userAgeGroup = Object.entries(communityData.demographicInsights || {}).find(([age]) => 
+    userData.age >= parseInt(age.split('-')[0]) && userData.age <= parseInt(age.split('-')[1])
+  );
+  return userAgeGroup ? `${userAgeGroup[1].avgSleep}h sleep, ${userAgeGroup[1].avgStress}/10 stress, ${userAgeGroup[1].avgExercise}min exercise` : 'No data';
+})()}
 
-ANALYSIS REQUIREMENTS:
-1. Compare user's profile with community health patterns
-2. Identify preventive measures based on local health trends
-3. Suggest personalized precautions considering local outbreaks
-4. Recommend lifestyle adjustments
-5. Highlight when to seek medical attention
+Generate: 4-6 actionable precautions (prioritized), 3-4 lifestyle tips, warning signs. Focus on prevention based on local trends. NO diagnosis/prescriptions.
 
-CRITICAL RULES:
-- Do NOT diagnose any medical condition
-- Do NOT prescribe medicines
-- Focus on PREVENTION and AWARENESS
-- Use community data to provide context-aware advice
-- Keep tone supportive and informative
-
-OUTPUT FORMAT (JSON ONLY):
-{
-  "riskAssessment": {
-    "level": "Low | Moderate | High",
-    "factors": ["factor1", "factor2"]
-  },
-  "precautionarySteps": [
-    {
-      "category": "Hygiene | Nutrition | Exercise | etc",
-      "action": "specific action",
-      "priority": "High | Medium | Low",
-      "reason": "why this is important based on trends"
-    }
-  ],
-  "localHealthContext": {
-    "relevantTrends": ["trend1", "trend2"],
-    "exposureRisks": ["risk1", "risk2"]
-  },
-  "lifestyleRecommendations": [
-    {
-      "area": "Sleep | Diet | Exercise | Stress",
-      "suggestion": "specific suggestion",
-      "benefit": "expected benefit"
-    }
-  ],
-  "whenToSeekHelp": [
-    "symptom or condition to watch for"
-  ],
-  "disclaimer": "This is not medical advice. Consult healthcare professionals for medical concerns."
-}
-
-IMPORTANT: Return ONLY valid JSON, no markdown formatting, no code blocks.
-`;
+Return JSON only:
+{"riskAssessment":{"level":"Low|Moderate|High","factors":["up to 3"]},"precautionarySteps":[{"category":"Hygiene|Nutrition|Exercise|Sleep|Hydration|Stress","action":"specific step","priority":"High|Medium|Low","reason":"1 sentence"}],"localHealthContext":{"relevantTrends":["2-3"],"exposureRisks":["2-3"]},"lifestyleRecommendations":[{"area":"Sleep|Diet|Exercise|Stress","suggestion":"measurable action","benefit":"benefit"}],"whenToSeekHelp":["3-5 warning signs"],"disclaimer":"Preventive guidance only. Consult healthcare providers."}`;
 
     const result = await model.generateContent(prompt);
     let text = result.response.text();
