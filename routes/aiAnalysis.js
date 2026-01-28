@@ -1,12 +1,12 @@
 import express from "express";
 import dotenv from "dotenv";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { requireAuth } from "../middlewares/authMiddleware.js";
 
 dotenv.config();
 const router = express.Router();
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const MODEL = process.env.AI_MODEL || "mistralai/ministral-8b-2512";
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 router.post("/health-analysis", requireAuth, async (req, res) => {
   try {
@@ -15,6 +15,10 @@ router.post("/health-analysis", requireAuth, async (req, res) => {
     if (!userData || !communityData) {
       return res.status(400).json({ error: "userData and communityData are required" });
     }
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash"
+    });
 
     const prompt = `Preventive health AI for ${userData.name}, ${userData.age}y in Verna, Goa.
 
@@ -32,29 +36,8 @@ Generate: 4-6 actionable precautions (prioritized), 3-4 lifestyle tips, warning 
 Return JSON only:
 {"riskAssessment":{"level":"Low|Moderate|High","factors":["up to 3"]},"precautionarySteps":[{"category":"Hygiene|Nutrition|Exercise|Sleep|Hydration|Stress","action":"specific step","priority":"High|Medium|Low","reason":"1 sentence"}],"localHealthContext":{"relevantTrends":["2-3"],"exposureRisks":["2-3"]},"lifestyleRecommendations":[{"area":"Sleep|Diet|Exercise|Stress","suggestion":"measurable action","benefit":"benefit"}],"whenToSeekHelp":["3-5 warning signs"],"disclaimer":"Preventive guidance only. Consult healthcare providers."}`;
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    let text = result.choices[0].message.content;
+    const result = await model.generateContent(prompt);
+    let text = result.response.text();
 
     // Clean up response
     text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -72,7 +55,7 @@ Return JSON only:
     }
 
   } catch (err) {
-    console.error("AI Analysis Error:", err);
+    console.error("Gemini AI Analysis Error:", err);
     res.status(500).json({ 
       error: "AI analysis failed",
       message: err.message 
