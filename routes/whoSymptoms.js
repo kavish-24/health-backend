@@ -190,6 +190,105 @@ res.json({
   }
 });
 
+router.post("/predictDisease", async (req, res) => {
+  const { symptoms, answers } = req.body;
 
+  if (!Array.isArray(symptoms) || !Array.isArray(answers)) {
+    return res.status(400).json({
+      error: "Symptoms and answers arrays are required"
+    });
+  }
+
+  const formattedAnswers = answers
+    .map(
+      (qa, i) =>
+        `${i + 1}. Q: ${qa.question}\n   A: ${qa.answer}`
+    )
+    .join("\n");
+
+  const prompt = `
+You are a clinical decision-support assistant.
+
+Reported symptoms:
+${symptoms.map(s => `- ${s}`).join("\n")}
+
+User responses to follow-up questions:
+${formattedAnswers}
+
+Your task:
+- Identify POSSIBLE medical conditions (not a diagnosis)
+- Rank them by likelihood (high, medium, low)
+- Explain reasoning briefly for each
+- Identify red-flag symptoms requiring urgent care
+- DO NOT state certainty
+- DO NOT say "you have"
+- DO NOT provide treatment
+
+Return STRICT JSON in this format:
+
+{
+  "possibleConditions": [
+    {
+      "name": "",
+      "likelihood": "high | medium | low",
+      "reasoning": ""
+    }
+  ],
+  "redFlags": [],
+  "advice": ""
+}
+`;
+
+  try {
+    const geminiResp = await axios.post(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+      {
+        contents: [
+          {
+            parts: [{ text: prompt }]
+          }
+        ]
+      },
+      {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        params: {
+          key: process.env.GEMINI_API_KEY
+        }
+      }
+    );
+
+    const rawText =
+      geminiResp.data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    const cleaned = rawText
+      ?.replace(/```json/i, "")
+      ?.replace(/```/g, "")
+      ?.trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch (err) {
+      return res.status(500).json({
+        error: "Gemini returned invalid JSON",
+        raw: rawText
+      });
+    }
+
+    res.json({
+      result: parsed,
+      disclaimer:
+        "This information is not a medical diagnosis and should not replace professional medical advice."
+    });
+
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({
+      error: "Failed to generate prediction"
+    });
+  }
+});
 
 export default router;
